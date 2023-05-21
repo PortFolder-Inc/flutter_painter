@@ -9,7 +9,10 @@ class _TextWidget extends StatefulWidget {
   const _TextWidget({
     Key? key,
     required this.child,
+    required this.textEditingController,
   }) : super(key: key);
+
+  final TextEditingController textEditingController;
 
   @override
   _TextWidgetState createState() => _TextWidgetState();
@@ -29,7 +32,7 @@ class _TextWidgetState extends State<_TextWidget> {
     super.initState();
 
     // Listen to the stream of events from the paint controller
-    WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       controllerEventSubscription =
           PainterController.of(context).events.listen((event) {
         // When an [AddTextPainterEvent] event is received, create a new text drawable
@@ -128,6 +131,7 @@ class _TextWidgetState extends State<_TextWidget> {
                   controller: PainterController.of(context),
                   drawable: drawable,
                   isNew: isNew,
+                  textEditingController: widget.textEditingController,
                 ),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) =>
@@ -140,6 +144,17 @@ class _TextWidgetState extends State<_TextWidget> {
 
 /// A dialog-like widget to edit text drawables in.
 class EditTextWidget extends StatefulWidget {
+  const EditTextWidget({
+    Key? key,
+    required this.controller,
+    required this.drawable,
+    required this.textEditingController,
+    this.isNew = false,
+  }) : super(key: key);
+
+//! 編集
+  final TextEditingController textEditingController;
+
   /// The controller for the current [FlutterPainter].
   final PainterController controller;
 
@@ -151,22 +166,12 @@ class EditTextWidget extends StatefulWidget {
   /// the previous action.
   final bool isNew;
 
-  const EditTextWidget({
-    Key? key,
-    required this.controller,
-    required this.drawable,
-    this.isNew = false,
-  }) : super(key: key);
-
   @override
   EditTextWidgetState createState() => EditTextWidgetState();
 }
 
 class EditTextWidgetState extends State<EditTextWidget>
     with WidgetsBindingObserver {
-  /// Text editing controller for the [TextField].
-  TextEditingController textEditingController = TextEditingController();
-
   /// The focus node of the [TextField].
   ///
   /// The node provided from the [TextSettings] will be used if provided
@@ -192,33 +197,17 @@ class EditTextWidgetState extends State<EditTextWidget>
     textFieldNode.addListener(focusListener);
 
     // Requests focus for the focus node after the first frame is rendered
-    WidgetsBinding.instance?.addPostFrameCallback((timeStamp) {
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       textFieldNode.requestFocus();
     });
 
     // Initialize the text in the [TextField] to the drawable text
-    textEditingController.text = widget.drawable.text;
+    widget.textEditingController.text = widget.drawable.text;
 
     // Add this object as an observer for widget bindings
     //
     // This is used to check the bottom view insets (the keyboard size on mobile)
-    WidgetsBinding.instance?.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    // Remove this object from being an observer
-    WidgetsBinding.instance?.removeObserver(this);
-
-    // Stop listening to the focus node
-    textFieldNode.removeListener(focusListener);
-
-    // If the focus node was an inner node (not from [TextSettings]), dispose of it
-    if (settings.focusNode == null) textFieldNode.dispose();
-
-    // Dispose of the text editing controller
-    textEditingController.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
@@ -234,16 +223,20 @@ class EditTextWidgetState extends State<EditTextWidget>
         ?.findRenderObject() as RenderBox?;
     final y = renderBox?.localToGlobal(Offset.zero).dy ?? 0;
     final height = renderBox?.size.height ?? screenHeight;
+    final topPadding = mediaQuery.padding.top;
+    final addBottomPadding = Platform.isIOS ? 240.0 : 300.0;
 
     return GestureDetector(
       // If the border is tapped, un-focus the text field
       onTap: () => textFieldNode.unfocus(),
       child: Container(
-        color: Colors.black38,
+        color: Colors.white.withOpacity(0.95),
         child: Padding(
           padding: EdgeInsets.only(
+              top: topPadding,
               bottom: (keyboardHeight - (screenHeight - height - y))
-                  .clamp(0, screenHeight)),
+                      .clamp(0, screenHeight) +
+                  addBottomPadding),
           child: Center(
             child: TextField(
               decoration: const InputDecoration(
@@ -251,12 +244,12 @@ class EditTextWidgetState extends State<EditTextWidget>
                 contentPadding: EdgeInsets.zero,
                 isDense: true,
               ),
-              cursorColor: Colors.white,
+              cursorColor: Colors.blue,
               buildCounter: buildEmptyCounter,
               maxLength: 1000,
               minLines: 1,
               maxLines: 10,
-              controller: textEditingController,
+              controller: widget.textEditingController,
               focusNode: textFieldNode,
               style: settings.textStyle,
               textAlign: TextAlign.center,
@@ -276,17 +269,16 @@ class EditTextWidgetState extends State<EditTextWidget>
   @override
   void didChangeMetrics() {
     super.didChangeMetrics();
-    final value = WidgetsBinding.instance?.window.viewInsets.bottom;
+    final value = WidgetsBinding.instance.window.viewInsets.bottom;
 
     // If the previous value of bottom view insets is larger than the current value,
     // the keyboard is closing, so lose focus from the focus node
-    if ((value ?? bottomViewInsets) < bottomViewInsets &&
-        textFieldNode.hasFocus) {
+    if ((value) < bottomViewInsets && textFieldNode.hasFocus) {
       textFieldNode.unfocus();
     }
 
     // Update the bottom view insets for next check
-    bottomViewInsets = value ?? 0;
+    bottomViewInsets = value;
   }
 
   /// Listener to focus events for [textFieldNode]
@@ -301,14 +293,14 @@ class EditTextWidgetState extends State<EditTextWidget>
   ///
   /// If the text is empty, it will remove the drawable from the controller.
   void onEditingComplete() {
-    if (textEditingController.text.trim().isEmpty) {
+    if (widget.textEditingController.text.trim().isEmpty) {
       widget.controller.removeDrawable(widget.drawable);
       if (!widget.isNew) {
         DrawableDeletedNotification(widget.drawable).dispatch(context);
       }
     } else {
       final drawable = widget.drawable.copyWith(
-        text: textEditingController.text.trim(),
+        text: widget.textEditingController.text.trim(),
         style: settings.textStyle,
         hidden: false,
       );
@@ -321,7 +313,25 @@ class EditTextWidgetState extends State<EditTextWidget>
       });
 
       Navigator.pop(context);
+
+      final autoTapEnable =
+          widget.textEditingController.text.trim().isNotEmpty && widget.isNew;
+      // Androidだけ反応しないがとりあえず良し
+      if (autoTapEnable) _tapCenter();
     }
+  }
+
+  Future<void> _tapCenter() async {
+    final centerOffset = Offset(MediaQuery.of(context).size.width / 2,
+        MediaQuery.of(context).size.height / 2);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    GestureBinding.instance.handlePointerEvent(PointerDownEvent(
+      position: centerOffset,
+    ));
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    GestureBinding.instance.handlePointerEvent(PointerUpEvent(
+      position: centerOffset,
+    ));
   }
 
   /// Updates the drawable in the painter controller.

@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import '../../controllers/events/selected_object_drawable_removed_event.dart';
 import '../../controllers/helpers/renderer_check/renderer_check.dart';
 import '../../controllers/drawables/drawable.dart';
@@ -63,29 +62,33 @@ class FlutterPainter extends StatelessWidget {
   final FlutterPainterBuilderCallback _builder;
 
   /// Creates a [FlutterPainter] with the given [controller] and optional callbacks.
-  const FlutterPainter(
-      {Key? key,
-      required this.controller,
-      this.onDrawableCreated,
-      this.onDrawableDeleted,
-      this.onSelectedObjectDrawableChanged,
-      this.onPainterSettingsChanged})
-      : _builder = _defaultBuilder,
+  const FlutterPainter({
+    Key? key,
+    required this.controller,
+    required this.textEditingController,
+    this.onDrawableCreated,
+    this.onDrawableDeleted,
+    this.onSelectedObjectDrawableChanged,
+    this.onPainterSettingsChanged,
+  })  : _builder = _defaultBuilder,
         super(key: key);
+
+  final TextEditingController textEditingController;
 
   /// Creates a [FlutterPainter] with the given [controller], [builder] and optional callbacks.
   ///
   /// Using this constructor, the [builder] will be called any time the [controller] updates.
   /// It is useful if you want to build UI that automatically rebuilds on updates from [controller].
-  const FlutterPainter.builder(
-      {Key? key,
-      required this.controller,
-      required FlutterPainterBuilderCallback builder,
-      this.onDrawableCreated,
-      this.onDrawableDeleted,
-      this.onSelectedObjectDrawableChanged,
-      this.onPainterSettingsChanged})
-      : _builder = builder,
+  const FlutterPainter.builder({
+    Key? key,
+    required this.controller,
+    required FlutterPainterBuilderCallback builder,
+    required this.textEditingController,
+    this.onDrawableCreated,
+    this.onDrawableDeleted,
+    this.onSelectedObjectDrawableChanged,
+    this.onPainterSettingsChanged,
+  })  : _builder = builder,
         super(key: key);
 
   @override
@@ -105,6 +108,7 @@ class FlutterPainter extends StatelessWidget {
                   onPainterSettingsChanged: onPainterSettingsChanged,
                   onSelectedObjectDrawableChanged:
                       onSelectedObjectDrawableChanged,
+                  textEditingController: textEditingController,
                 ));
           }),
     );
@@ -134,14 +138,17 @@ class _FlutterPainterWidget extends StatelessWidget {
   final ValueChanged<PainterSettings>? onPainterSettingsChanged;
 
   /// Creates a [_FlutterPainterWidget] with the given [controller] and optional callbacks.
-  const _FlutterPainterWidget(
-      {Key? key,
-      required this.controller,
-      this.onDrawableCreated,
-      this.onDrawableDeleted,
-      this.onSelectedObjectDrawableChanged,
-      this.onPainterSettingsChanged})
-      : super(key: key);
+  const _FlutterPainterWidget({
+    Key? key,
+    required this.controller,
+    required this.textEditingController,
+    this.onDrawableCreated,
+    this.onDrawableDeleted,
+    this.onSelectedObjectDrawableChanged,
+    this.onPainterSettingsChanged,
+  }) : super(key: key);
+
+  final TextEditingController textEditingController;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +174,7 @@ class _FlutterPainterWidget extends StatelessWidget {
                   child: _FreeStyleWidget(
                       // controller: controller,
                       child: _TextWidget(
+                    textEditingController: textEditingController,
                     // controller: controller,
                     child: _ShapeWidget(
                       // controller: controller,

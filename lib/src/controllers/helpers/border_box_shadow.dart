@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart';
 /// This is used to show an outer shadow blur for object controls.
 class BorderBoxShadow extends BoxShadow {
   /// The blur style to use.
+  // ignore: annotate_overrides, overridden_fields
   final BlurStyle blurStyle;
 
   /// Creates a new [BorderBoxShadow] with the given `blurStyle` and other arguments matching [BoxShadow].

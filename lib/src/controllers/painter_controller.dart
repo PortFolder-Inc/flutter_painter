@@ -433,8 +433,13 @@ class PainterControllerValue {
   }
 
   @override
+  // ignore: deprecated_member_use
   int get hashCode => hashValues(
-      hashList(_drawables), background, settings, selectedObjectDrawable);
+      // ignore: deprecated_member_use
+      hashList(_drawables),
+      background,
+      settings,
+      selectedObjectDrawable);
 }
 
 /// Private class that is used internally to represent no
