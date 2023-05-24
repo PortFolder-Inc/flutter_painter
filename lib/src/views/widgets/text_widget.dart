@@ -324,7 +324,7 @@ class EditTextWidgetState extends State<EditTextWidget>
   Future<void> _tapCenter() async {
     final centerOffset = Offset(MediaQuery.of(context).size.width / 2,
         MediaQuery.of(context).size.height / 2);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     GestureBinding.instance.handlePointerEvent(PointerDownEvent(
       position: centerOffset,
     ));
